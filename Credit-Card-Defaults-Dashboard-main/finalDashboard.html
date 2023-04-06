@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- initializing d3 -->
+<script type='text/javascript' src='https://d3js.org/d3.v7.min.js'></script>
+<style>
+    /* css styling for button - setting color of button and properties of text inside the button */
+    .button1{
+        font-size:12px;
+        background-color: #fffae5;
+        color: grey;
+        border: 1px solid grey;
+        padding: 7px 9px;
+    }
+    /* css styling for the webpage - adding background color to the main body. */
+    body {
+        background-color: whitesmoke;
+    }
+</style>
+</head>
+<body >
+<!-- adding button to top right of the page and calling the function to refresh the entire dashboard. -->
+<button style="float: right;" type="button" class="button1" onclick="updateDashboard()">Reset Filters</button> 
+<script> 
+// main function that renders the dashboard
+function updateDashboard(){
+    d3.selectAll("svg").remove()            //removing any previous svg or text vaues to load in the dashboard 
+    d3.selectAll("text").remove()
+
+    d3.select('body')                               //adding a heading for the dashboard - setting the different proprties of that text
+        .append('text')
+        .text("Analysing Credit Card Defaulters") 
+        .style("font-size","25px")
+        .style('color', 'DimGray')
+        
+    d3.select('body')                   //adding a svg to the main body to place all graphs into it
+      .append("svg")
+      .attr("id","svg1")        //assigning an id to the svg
+      .attr("width", 1520)      //setting the height and width of the svg
+      .attr("height", 680) 
+
+    //reading the csv file containing the data
+    d3.csv('C:\Users\nihal\OneDrive\Desktop\Credit-Card-Defaults-Dashboard-main\Data.csv').then(function(main_data){
+        main_data = main_data.filter(function(d){return d.default_payment_next_month == 1})   //filtering the dataset in order to analyse data only for the defaulters
+
+        // ******************************** horizontal bar - defaulters by education level **************************************
+
+        // function to generate the bar chart for education level
+        function eduChart(main_data){
+            // filtering the data for each education level and getting the no of instances for every level
+            //these values are then stored in their respective variables 
+            ed1 = main_data.filter(function(d){return d.EDUCATION==1})
+            var e1 = d3.count(ed1, d=>d.EDUCATION)
+            ed2 = main_data.filter(function(d){return d.EDUCATION==2})
+            var e2 = d3.count(ed2, d=>d.EDUCATION)
+            ed3 = main_data.filter(function(d){return d.EDUCATION==3})
+            var e3 = d3.count(ed3, d=>d.EDUCATION)
+            ed4 = main_data.filter(function(d){return d.EDUCATION==4})
+            var e4 = d3.count(ed4, d=>d.EDUCATION)
+            //creating a dictionary to associate each value obtained above to their education level. 
+            var edugrps =[
+                {group: "1", value: e1, name:"Graduate School"},
+                {group: "2", value: e2,name:"University"},
+                {group: "3", value: e3,name:"High School"},
+                {group: "4", value: e4,name:"Others"}   
+            ]
+
+            var width4 = 280, height4 = 135;        // decalring variables for the size of the graph
+
+            d3.selectAll("#eduBar").remove()        // remove any previous instances of this graph if present - useful when the dashboard is refreshed
+
+            var svg1 = d3.select("#svg1")           // adding a group element to the svg - the graph will be added to this group
+                .append("g")
+                .attr("id","eduBar")                        //assigning an id to the group
+                .attr("transform", "translate(120 ,70)");   //positioning the element
+            
+            svg1.append("g")                                        //adding demarcation to the graph - positioning and setting the size and color of the border
+                .attr("transform", "translate(-95 ,-50)")
+                .append("rect")
+                .attr("height",230)
+                .attr("width", 400)
+                .attr("rx", 15)
+                .attr("ry", 15)
+                .attr("fill","white")
+                .attr("stroke","Gainsboro")
+
+            d3.select("#eduBar")                                //adding a group element to the eduBar group - to insert graph title
+                .append("g")
+                .attr("transform", "translate(20 ,-17)")        // positioning the group (i.e. the title)
+                .append("text")
+                .text("Defaulters by Education Level")          //adding text to the group - heading of the graph
+                .style("font-size","15px")                      // setting the font size of the text    
+                .style('fill', 'DimGray')                       //setting the color of the text
+
+            const x3 = d3.scaleLinear()                     //creating a scale for the x axis
+                .domain([0, 4000])                          //setting domain as 0 to 4000
+                .range([ 0, width4]);                       //setting the range as the entire width of the graph
+
+            svg1.append("g")
+                .attr("transform", `translate(0, ${height4})`)      //adding and positioning a group element to the eduBar group - to add the x axis to it
+                .call(d3.axisBottom(x3))                            //calling the x axis
+                .attr('color', 'DimGray')                           //setting color of the axis
+                .selectAll("text")          
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+            
+            const y3 = d3.scaleBand()                                       //creating a scale for the y axis
+                .range([ 0, height4 ])                                      //setting the range as the entire height of the graph
+                .domain(edugrps.map(function(d) { return d.name; }))        //setting the domain as the names of the education levels
+                .padding(.1);                                               //adding padding to the graph
+
+            svg1.append("g")                       //adding a group element to the eduBar group - to add the y axis to it 
+                .call(d3.axisLeft(y3))             //calling the y axis
+                .attr('color', 'DimGray')           //setting color of the axis
+            
+            svg1.selectAll("eduRect")               //adding the bars to the graphs
+                .data(edugrps)                      //assigning the data for these bars
+                .enter()
+                .append("rect")                     //adding rectangle elements to the graph
+                .attr("id", "eduRect")              //assigning an id to these rectangles
+                .attr("x", x3(0) )                                      //positioning the bars based on the education level value on the y axis
+                .attr("y", function(d) { return y3(d.name)+10; })
+                .attr("width", function(d) { return x3(d.value); })     //setting width and height of these bars - width of the bar is based on the data value
+                .attr("height", 20 )
+                .attr("fill", "#74d3ae")                               //setting color of the bars
+                .on("click", function(event ,d){                        //adding a mouse click function to these rectangles
+                    d3.selectAll("#eduRect").style("opacity", 0.5)        //reducing the opacity of all the bars
+                    d3.selectAll("#eduRect") .attr("stroke","#74d3ae")      //retaining the stroke color of all the bars
+                    d3.select(this).style("opacity", 1)                     // retain full opacity only for the bar that is selected
+                    d3.select(this)
+                        .attr("height", "22")                                 //increasing the size of the selected bar
+                        .attr("stroke","black")                         //adding a black border to the selected bar
+                    var num = d.group                    //getting the number of the education level
+                    newData = main_data.filter(function(d){return d.EDUCATION == num})  //filter the main data according to the education level of the bar that is selected and assgin it to a variable
+                    //calling all other charts for the new data
+                    sexChart(newData)
+                    limitBalChart(newData)
+                    ageChart(newData)
+                    marriageChart(newData)
+                    paymentCharts(newData)
+                })
+                .on("mouseover",function(d,i){                             //adding a mouseover function to display the value 
+                        d3.selectAll("#eduRect").style("opacity", 0.3)     //reducing the opacity of all bars
+                        d3.select(this).style("opacity", 1)                 //retaining the full opacity for only the bar that is selected
+                        var g = svg1.append("g")                //adding a group element to the eduBar group to display the value 
+                        g.append("text")                //adding text element to the group
+                            .attr('class', 'val')       //assigning a class to the text
+                            //positioning the text next to the bar based on its width
+                            .attr('y', function() {
+                                return y3(i.name)+22;       
+                            })
+                            .attr('x', function() {
+                                return x3(i.value)+5;
+                            })
+                            .style('fill', 'DimGray')      // setting color of the text
+                            .style("font-size","14px")      //setting font size of the text
+                            .text( function(d) { 
+                                return  i.value;       //setting value of the text
+                            }); 
+                })
+                .on("mouseout", function(){                 //adding a mouse out function to remove the text value 
+                    d3.selectAll("#eduRect").style("opacity", 1)                   // resetting opacity of all bars
+                    d3.selectAll('.val').remove()                                 //removing the text value that was added
+                })         
+        }
+        eduChart(main_data)     //calling the function to generate the horizontal bar chart.
+
+        // ********************************** pie chart - defaulters by gender **************************************************
+
+        //function to generate the piechart for defaulters based on gender
+        function sexChart(main_data){
+            d3.selectAll("#sexPie").remove()          // remove any previous instances of this graph if present - useful when the dashboard is refreshed
+            // filtering the data for males and females and getting the no of instances for each
+            //these values are then stored in their respective variables 
+            male_data =main_data.filter(function(d){return d.SEX ==1})
+            female_data = main_data.filter(function(d){return d.SEX ==2})
+            var m = d3.count(male_data, d=>d.SEX)
+            var f = d3.count(female_data, d=>d.SEX)
+             //creating a dictionary to associate each value obtained above, to their gender
+            var data1 = [
+                {group: 1, value: m},
+                {group: 2, value: f}
+            ];
+            //generating a new array and placing only the numeric values for generating the pie chart
+            var data1val = new Array();
+            data1val.push(m,f)
+            //declaring variables for setting size of the graph
+            const xSize = 290; const ySize = 160;
+            const radius = Math.min(xSize, ySize) / 2;
+            // adding a group element to the svg - the graph will be added to this group
+            const svg2 =d3.select("#svg1").append("g")        
+                    .attr("id","sexPie")                            //assigning an id to the group
+                    .attr("transform","translate(970,160)");         //positioning element
+            
+            svg2.append("g")                                        //adding demarcation to the graph - positioning and setting the size and color of the border
+                .attr("transform", "translate(-130 ,-140)")
+                .append("rect")
+                .attr("height",230)
+                .attr("width", 255)
+                .attr("rx", 15)
+                .attr("ry", 15)
+                .attr("fill","white")
+                .attr("stroke","Gainsboro")
+
+            d3.select("#sexPie")                                //adding a group element to the eduBar group - to insert graph title
+                .append("g")
+                .attr("transform", "translate(-60 ,-110)")       // positioning the group (i.e. the title)
+                .append("text")
+                .text("Defaulters by Gender")                       //adding text to the group - heading of the graph
+                .style("font-size","15px")                          // setting the font size of the text
+                .style('fill', 'DimGray')                           //setting the color of the text
+
+            var color = d3.scaleOrdinal(['#84a59d','#f5cac3']);         //generating color range
+
+            var pie = d3.pie();                                         // Generate the pie
+            var arc = d3.arc()                                          // Generate the arcs and specify the size
+                    .innerRadius(35)
+                    .outerRadius(radius);
+            var arcs = svg2.selectAll("arc")             //Generate groups
+                        .data(pie(data1val))            //assigning the data to the pie function
+                        .enter()
+                        .append("g")
+                        .attr("id","pieArc")            //assigning id and class to the groups
+                        .attr("class", "arc")
+            //Draw arc paths
+            arcs.append("path")
+                .attr("id","piePath")               //assigning id to the path
+                .attr("transform", "translate(0 ,-10)")
+                .attr("fill", function(d, i) {
+                    return color(i);                //adding color based on the color array
+                })
+                .attr("d", arc)                     //assigning the data as the output of the arc function
+                .on("click", function(event ,d){                        //adding an on click function to the path
+                    d3.selectAll("#piePath").style("opacity", 0.3)      //reducing the opacity of all paths/segments
+                    d3.select(this).style("opacity", 1)                     //retain original opacity only for the segment that is selected  
+                    //comparing the data value of the segment that is selected with the values in the dictionary
+                    //this is done to get the gender associated with the value
+                    if(d.data == m){                                
+                        var num = 1
+                    }
+                    else{ 
+                        var num = 2
+                    }
+                    //the main data is filtered according to the segment that is selected
+                    newData3 = main_data.filter(function(d){return d.SEX == num})
+                    //all charts are rendered for the new data
+                    eduChart(newData3)
+                    limitBalChart(newData3)
+                    ageChart(newData3)
+                    marriageChart(newData3)
+                    paymentCharts(newData3)
+                }) 
+                .on("mouseover", function(event,d){      //adding a mouseover function to display the value 
+                    d3.selectAll("#labelText").remove()     // remove all text that is already present (i.e. the label specifying the gender)
+                    
+                    d3.selectAll("#pieArc").append("text")          //adding text to the pie chart
+                        .attr("id","pieText")                       //assigning id to the text
+                        .attr("transform", function(d,i) {          //positioning the text at the centroid of the pie
+                            var _d=arc.centroid(d);
+                            _d[0] *=1.01;
+                            _d[1] *= 1.01;
+                            return "translate(" + _d + ")";  
+                        })
+                        .style("text-anchor","middle")          //specifying the location of the text
+                        .style('fill', function(d) {                     //assigning color to the text 
+                        if(d.data == m){
+                                return "AliceBlue"
+                            }
+                            else{ 
+                               return "DimGray"
+                            }
+                    })             
+                        .style("font-size","15")                //specify the size of the text
+                        .text(function (d) { 
+                            return d.data;                  //assigning the data values as text
+                        })
+                })
+                .on("mouseout",function(event,d){           //adding a moise out function to the segments
+                    d3.selectAll("#pieText").remove()       //removing the values text that was added on mouse over
+
+                    arcs.append("text")                     //adding text to the segements to indicate the gender
+                    .attr("id","labelText")                 //assigning an id to these texts
+                    .attr("transform", function(d,i) {      //positioning the text according to the centroid of the pie
+                            var _d=arc.centroid(d);
+                            _d[0] *=1.01;
+                            _d[1] *= 1.01;
+                            return "translate(" + _d + ")";    
+                    })
+                    .style("font-size","13")                //specifying the size of the text
+                    .style("text-anchor","middle")          //placing the text at the middle
+                    .style('fill',function(d) {                     //assigning color to the text 
+                        if(d.data == m){
+                                return "AliceBlue"
+                            }
+                            else{ 
+                               return "DimGray"
+                            }
+                    } )            
+                    .text(function (d) {                    //assigning the text according to the value of the segment 
+                        if(d.data == m){
+                                return "Male"
+                            }
+                            else{ 
+                               return "Female"
+                            }
+                    });
+                })
+                arcs.append("text")             //adding text to the segment to indicate the gender 
+                    .attr("id","labelText")             //assigning id to the text
+                    .attr("transform", function(d,i) {  //positioning the text according to the centroid of the pie
+                            var _d=arc.centroid(d);
+                            _d[0] *=1.01;
+                            _d[1] *= 1.01;
+                            return "translate(" + _d + ")";    
+                    })
+                    .style("font-size","13")                //specifying the size of the text
+                    .style("text-anchor","middle")          //placing the text at the middle
+                    .style('fill', function(d) {                     //assigning color to the text 
+                        if(d.data == m){
+                                return "AliceBlue"
+                            }
+                            else{ 
+                               return "DimGray"
+                            }
+                    })            
+                    .text(function (d) {                     //assigning the text according to the value of the segment 
+                        if(d.data == m){    
+                                return "Male"
+                            }
+                            else{ 
+                               return "Female"
+                            }
+                    })
+        }
+        sexChart(main_data)     //calling the function to generate the pie chart
+
+        //*************************************** histogram - limiting balance of defaulters *****************************************
+
+        //function to generate the histogram of limiting balance of defaulters
+        function limitBalChart(main_data){
+            d3.selectAll("#limitHist").remove()     // remove any previous instances of this graph if present - useful when the dashboard is refreshed     
+
+            const svg4 =d3.select("#svg1").append("g")        //adding g element to the svg to display the graph
+                .attr("id","limitHist")                         //assigning an id to the group
+                .attr("transform","translate(950,303)");         //positioning the  g element
+
+            svg4.append("g")                                        //adding demarcation to the graph - positioning and setting the size and color of the border
+                .attr("transform", "translate(-80 ,-40)")
+                .append("rect")
+                .attr("height",415)
+                .attr("width", 620)
+                .attr("rx", 15)
+                .attr("ry", 15)
+                .attr("fill","white")
+                .attr("stroke","Gainsboro")
+            
+            d3.select("#limitHist")                              //adding a group element to the limitHist group - to insert graph title
+                .append("g")
+                .attr("transform", "translate(160 ,-5)")         // positioning the group (i.e. the title)
+                .append("text")
+                .text("Limiting Balance of Defaulters")         //adding text to the group - heading of the graph
+                .style("font-size","15px")                      // setting the font size of the text
+                .style('fill', 'DimGray')                   //setting the color of the text
+
+            //declaring variables for setting size of the graph
+            var  width1 = 500;
+            var  height1 = 330;
+
+            const x1 = d3.scaleLinear()         //creating a scale for the x axis
+                .domain([0, 1000000])           //setting domain as 0 to 1000000
+                .range([0, width1]);            //setting the range as the entire width of the graph
+
+            svg4.append("g")                                            //adding and positioning a group element to the limitHist group - to add the x axis to it
+                .attr("transform", `translate(0, ${height1+4})`)
+                .call(d3.axisBottom(x1))                                //calling the x axis
+                .attr('color', 'DimGray');                              //setting color of the axis
+
+            const histogram = d3.histogram()            
+                    .value(function(d) { return d.LIMIT_BAL; })   //passing the vector of values to be plotted
+                    .domain(x1.domain())                        // getting the domain of the graph
+                    .thresholds(x1.ticks(50));                  // specifying the numbers of bins
+
+            //apply this function to data to get the bins
+            const bins = histogram(main_data); 
+
+            const y1 = d3.scaleLinear()             //creating a scale for the y axis        
+                    .domain([0, d3.max(bins, function(d) { return d.length; })+100])    //setting the domain for the axis as the maximum of length plus 100
+                    .range([height1, 0]);           //specifying the range of the graph as the height if the graph
+                    
+            svg4.append("g")                    //adding a group element to insert the y axis
+                .call(d3.axisLeft(y1))          //calling the y axis
+                .attr('color', 'DimGray');      //setting the color of the axis
+
+            svg4.selectAll("limitBar")          //adding the bars to the graph
+                .data(bins)         //assigning data as output of histogram funtion
+                .join("rect")               //joining the rectangles
+                .attr("id","limitBar")      //assigning id to these rectangle
+                .attr("x", 20)           
+                .attr("transform", function(d) { return `translate(${x1(d.x0)} , ${y1(d.length)})`})    //positioning these bars accordingly on the x axis
+                .attr("width", function(d) { return x1(d.x1) - x1(d.x0) })          //specifying width of the bar
+                .attr("height", function(d) { return height1 - y1(d.length); })     //specifying the height of the bar
+                .style("fill", "#7ea8be")           //assigning color to the bar
+        }
+        limitBalChart(main_data)    //calling the function to generate the histogram
+
+        //********************************** bar graph - defaulters by age group ***************************************************
+
+        //function to generate the bar graph of number of defaulters by age group
+        function ageChart(main_data){
+            // filtering the data for each age group and getting the no of instances for every group
+            //these values are then stored in their respective variables 
+            ag1 = main_data.filter(function(d){return d.AGE>=20 && d.AGE<30})
+            var a1 = d3.count(ag1, d=>d.AGE)
+            ag2 = main_data.filter(function(d){return d.AGE>=30 && d.AGE<40})
+            var a2 = d3.count(ag2, d=>d.AGE)
+            ag3 = main_data.filter(function(d){return d.AGE>=40 && d.AGE<50})
+            var a3 = d3.count(ag3, d=>d.AGE)
+            ag4 = main_data.filter(function(d){return d.AGE>=50 && d.AGE<60})
+            var a4 = d3.count(ag4, d=>d.AGE)
+            ag5 = main_data.filter(function(d){return d.AGE>=60 && d.AGE<70})
+            var a5 = d3.count(ag5, d=>d.AGE)
+            ag6 = main_data.filter(function(d){return d.AGE>=70 && d.AGE<80})
+            var a6 = d3.count(ag6, d=>d.AGE)
+            //creating a dictionary to associate each value obtained above to their age group
+            var grps =[
+                {group: "20-29", value: a1, start:20, end:30},
+                {group: "30-39", value: a2, start:30, end:40},
+                {group: "40-49", value: a3, start:40, end:50},
+                {group: "50-59", value: a4, start:50, end:60},
+                {group: "60-69", value: a5, start:60, end:70},
+                {group: "70-79", value: a6, start:70, end:80},
+            ]
+            // decalring variables for the size of the graph
+            const width = 280, height = 140 ;
+
+            d3.selectAll("#ageBar").remove()        // remove any previous instances of this graph if present - useful when the dashboard is refreshed
+
+            const svg3 =d3.select("#svg1").append("g")        //adding g element to the svg to display the graph
+                    .attr("id","ageBar")                    //assigning id to the group
+                    .attr("transform","translate(1180,67)")         //positioning the element
+            
+            svg3.append("g")                                        //adding demarcation to the graph - positioning and setting the size and color of the border
+                .attr("transform", "translate(-60 ,-48)")
+                .append("rect")
+                .attr("height",230)
+                .attr("width", 370)
+                .attr("rx", 15)
+                .attr("ry", 15)
+                .attr("fill","white")
+                .attr("stroke","Gainsboro")
+
+            d3.select("#ageBar")                            //adding a group element to the ageBar group - to insert graph title
+                .append("g")
+                .attr("transform", "translate(50 ,-17)")        // positioning the group (i.e. the title)
+                .append("text")
+                .text("Defaulters by Age Group")        //adding text to the group - heading of the graph
+                .style("font-size","15px")              // setting the font size of the text
+                .style('fill', 'DimGray')               //setting the color of the text
+            
+            var x = d3.scaleBand()                  //scalling the data values to plot on the x axis
+                    .range([ 0, width ])                //setting the range as the complete width of the graph
+                    .domain(grps.map(function(d) { return d.group; }))  //setting the domain as the age groups
+                    .padding(0.2);                              //adding a padding to the axis
+
+            svg3.append("g")                                        //adding and positioning a group element to the ageBar group - to add the x axis to it
+                .attr("transform", `translate(0, ${height})`)   
+                .call(d3.axisBottom(x))                             //calling the x axis
+                .attr('color', 'DimGray')                           //setting color of the axis
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+            
+            var y = d3.scaleLinear()        //scalling the data values to plot on the y axis
+                .domain([0, 2500])          //specifying the domain as 0 to 2500
+                .range([height, 0])         //setting the range of the axis as the height of the entire graph
+            
+            svg3.append("g")                         //adding and positioning a group element to the ageBar group - to add the y axis to it
+                .call(d3.axisLeft(y).ticks(7))      //calling the y axis and specifying the number of ticks
+                .attr('color', 'DimGray')           //assigning the color of the axis
+
+            svg3.selectAll("ageRect")           //adding bars to the graph
+                .data(grps)                 //assigning data values to the bars
+                .join("rect")                   //adding rectangle elements
+                .attr("x", function(d) { return x(d.group)+5; })                  //positioning the bars based on the data values
+                .attr("y", function(d) { return y(d.value); })
+                .attr("id","ageRect")                               //assigning id to the bars
+                .attr("width", x.bandwidth()-10)                                    //setting the width of the bar
+                .attr("height", function(d) { return height - y(d.value); })    //setting the height of the bars
+                .attr("fill", "#f694c1")                                        //setting the color of the bars
+                .on("click", function(event ,d){                            //adding an on click event to the bars
+                    d3.selectAll("#ageRect").style("opacity", 0.5)          //reducing the opacity of all the bars
+                    d3.selectAll("#ageRect").attr("stroke","#f694c1") 
+                    d3.select(this).style("opacity", 1)                     //retain original opacity only for the bar that is selected
+                    d3.select(this)
+                            .attr("stroke","black")                         //adding a black border to the bar
+                    var Startnum = d.start , Endnum =d.end                  //getting the start and years of the age group for the bar that is selected
+                    newData1 = main_data.filter(function(d){return d.AGE>=Startnum && d.AGE<Endnum}) // filter the data according to the values given for the age group
+                    //generating all the charts for the new data
+                    sexChart(newData1)
+                    limitBalChart(newData1)
+                    eduChart(newData1)
+                    marriageChart(newData1)
+                    paymentCharts(newData1)
+                }) 
+                .on("mouseover",onMouseOver)  //adding a mouseover event  
+                .on("mouseout", onMouseOut)   //adding a mouseout event
+
+                function onMouseOver(d, i) {        //declaring the mouse over function
+                    d3.selectAll("#ageRect").style("opacity", 0.3)      //reducing the opacity of all the bars
+                    d3.select(this).style("opacity", 1)                 //retaining the full opacity of the selected bar
+                    var g = svg3.append("g")                             //adding a group element to the svg
+                    g.append("text")                                   //adding text element to the group
+                        .attr('class', 'val')                              //assigning the class as value
+                        .attr('x', function() {                       //positioning the text on top of the bar
+                            return x(i.group)+ x.bandwidth()/4-1;
+                        })
+                        .attr('y', function() {
+                            return y(i.value)-5;
+                        })
+                        .style("font-size","14px")              //setting the font size
+                        .style('fill', 'DimGray')               //setting color of the text
+                        .text( function(d) { 
+                            return  i.value;                            //setting the value as text
+                        });  
+                }
+                function onMouseOut(d,i){      //declaring the mouse out function
+                    d3.selectAll("#ageRect").style("opacity", 1)            //bringing the opacity of all the bars to 1
+                    d3.selectAll('.val').remove()                                 //removing the text value of the bar           
+                }
+        }
+        ageChart(main_data)     //calling the function to generate the bar plot
+
+        //******************************** lollipop chart - defaulters by marital status *********************************************
+
+        //function to generate the lollipop chart for defaulters by marital status
+        function marriageChart(main_data){
+            // filtering the data for each marital status and getting the no of instances for every group
+            // these values are then stored in their respective variables 
+            mg1 = main_data.filter(function(d){return d.MARRIAGE==1})
+            var m1 = d3.count(mg1, d=>d.MARRIAGE)
+            mg2 = main_data.filter(function(d){return d.MARRIAGE==2})
+            var m2 = d3.count(mg2, d=>d.MARRIAGE)
+            mg3 = main_data.filter(function(d){return d.MARRIAGE==3})
+            var m3 = d3.count(mg3, d=>d.MARRIAGE)
+            //creating a dictionary to associate each value obtained above to their marital status
+            var marrGrps =[
+                {group: 1, value: m1, name:"Married"},
+                {group:2, value: m2, name:"Single"},
+                {group:3, value: m3, name:"Others"},
+            ]
+            // decalring variables for the size of the graph
+            var width2 = 270;
+            var height2 = 150;
+
+            d3.selectAll("#marrLollipop").remove()      // remove any previous instances of this graph if present - useful when the dashboard is refreshed
+
+            const svg5 =d3.select("#svg1").append("g")        //adding g element to the svg to plot the graph
+                    .attr("id","marrLollipop")                  //assigning id to the group
+                    .attr("transform","translate(515,60)");         //positioning the element
+
+            svg5.append("g")                                        //adding demarcation to the graph - positioning and setting the size and color of the border
+                .attr("transform", "translate(-65 ,-40)")
+                .append("rect")
+                .attr("height",230)
+                .attr("width", 365)
+                .attr("rx", 15)
+                .attr("ry", 15)
+                .attr("fill","white")
+                .attr("stroke","Gainsboro")
+
+            d3.select("#marrLollipop")                      //adding a group element to the marrLollipop group - to insert graph title
+                .append("g")
+                .attr("transform", "translate(45 ,-10)")       // positioning the group (i.e. the title)
+                .append("text")
+                .text("Defaulters by Marital Status")           //adding text to the group - heading of the graph
+                .style("font-size","15px")                      // setting the font size of the text
+                .style('fill', 'DimGray')                       //setting the color of the text
+
+            const x2 = d3.scaleLinear()                 //scalling the data values to plot on the x axis
+                .domain([0, 4500])                  //specifying the domain as 0 to 5000
+                .range([ 0, width2]);               //setting the range as the complete width of the graph
+
+            svg5.append("g")                                        //adding and positioning a group element to the marrLollipop group - to add the x axis to it
+                .attr("transform", `translate(0, ${height2})`)
+                .call(d3.axisBottom(x2))                            //calling the x axis
+                .attr('color', 'DimGray')                            //setting color of the axis
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")        // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+            
+            const y2 = d3.scaleBand()                   //scalling the data values to plot on the y axis
+                .range([ 0, height2 ])                      //setting the range of the axis as the height of the entire graph
+                .domain(marrGrps.map(function(d) { return d.name; }))       //setting the domain as the marital status
+                .padding(1);
+            
+            svg5.append("g")                //adding and positioning a group element to the marrLollipop group - to add the y axis to it
+                .call(d3.axisLeft(y2))      //calling the y axis
+                .attr('color', 'DimGray')   //setting the color of the text
+
+            svg5.selectAll("myline")         //adding lines to the graph
+                .data(marrGrps)             //assignng data values to the graph
+                .enter()
+                .append("line")             //adding the line
+                .attr("id","myLine")        //assiging an id to the lines
+                .attr("x1", function(d) { return x2(d.value); })        //positioning the line
+                .attr("x2", x2(0))
+                .attr("y1", function(d) { return y2(d.name); })
+                .attr("y2", function(d) { return y2(d.name); })
+                .attr("stroke", "#979dac")        //setting the color of the line
+
+            svg5.selectAll("marrCircle")    //adding circles to the graph
+                .data(marrGrps)                //assigning data values to the graph
+                .enter()
+                .append("circle")       
+                .attr("id","marrCircle")        //assigning id to the circle
+                .attr("cx", function(d) { return x2(d.value); })        //positioning the circles
+                .attr("cy", function(d) { return y2(d.name); })
+                .attr("r", "5")                                 //setting the radius of the circle
+                .style("fill", "#fe6d73")               //setting the color of the circle
+                .on("click", function(event ,d){            //adding an on click function to the circle
+                    d3.selectAll("#marrCircle").style("opacity", 0.5)   //reducing the opacity of all the circles 
+                    d3.selectAll("#myLine").style("opacity", 0.5)       //reduing the opacity of all the lines
+                    d3.selectAll("#marrCircle") .attr("r","5")          //retaining the original radius of all the circles
+                    d3.selectAll("#marrCircle") .attr("stroke","#fe6d73")   //retaining the original stroke color of the circles
+                    d3.select(this).style("opacity", 1)                     //retain original opacity only for the circle that is selected
+                    d3.select(this)
+                    .attr("r", "6")                                 //increasing the size of the selected circle
+                    .attr("stroke","black")                         //adding a black border to the circle
+                    var num = d.group                   //getting the marital status of the selected circle
+                    newData2 = main_data.filter(function(d){return d.MARRIAGE == num})      //filter the main data for the selected marital status 
+                    //calling all the charts for the filtered data
+                    sexChart(newData2)
+                    limitBalChart(newData2)
+                    ageChart(newData2)
+                    eduChart(newData2)
+                    paymentCharts(newData2)
+                }) 
+                .on("mouseover",function(d,i){                             //adding a mouseover function to display data
+                        d3.selectAll("#marrCircle").style("opacity", 0.3)       //reduce opacity for all the circles and lines
+                        d3.selectAll("#myLine").style("opacity", 0.3)
+                        d3.select(this).style("opacity", 1)                 //retain original opacity of the selected circle
+                        var g = svg5.append("g")  
+                        g.append("text")                //adding text element to the group
+                            .attr('class', 'val')       //assigning the class as value
+                            .attr('y', function() {
+                                return y2(i.name) +5;       //positioning the text next to the circle based on the data
+                            })
+                            .attr('x', function() {
+                                return x2(i.value)+10;
+                            })
+                            .style('fill', 'DimGray')       //setting color of the text
+                            .text( function(d) { 
+                                return  i.value;       //setting value of the text
+                            }); 
+                })
+                .on("mouseout", function(){         //adding a mouse out function to the circle
+                    d3.selectAll("#marrCircle").style("opacity", 1)     //bringing the opacity of all the circles an lines back to 1
+                    d3.selectAll("#myLine").style("opacity", 1)
+                    d3.selectAll('.val').remove()                                 //removing the text value that was added
+                })  
+        }
+        marriageChart(main_data)                    //calling the function to generate the lollipop plot
+
+        //*********************************** scatter plots - billing vs payement of defaulters ***********************************
+
+        // function to generate the scatter plots
+        function paymentCharts(main_data){ 
+            var width3=200, height3=150                             // defining variables for setting size of the graph
+
+            d3.selectAll("#payScatter").remove()                    // check for any previous instance of the plot and remove if any - useful when dashboard is reloaded
+            
+            const svg6 =d3.select("#svg1").append("g")              //adding g element to the svg to plot the graphs
+                    .attr("id","payScatter")                        //assigning an id to the group
+                    .attr("transform","translate(110,220)");         //positioning the element
+            
+            svg6.append("g")                                        //adding demarcation to the graph - positioning and setting the size and color of the border
+                .attr("transform", "translate(-85 ,43)")
+                .append("rect")
+                .attr("height",415)
+                .attr("width", 830)
+                .attr("rx", 15)
+                .attr("ry", 15)
+                .attr("fill","white")
+                .attr("stroke","Gainsboro")
+
+            d3.select("#payScatter")                                //adding another group element to the 'payScatter' group
+                .append("g")
+                .attr("transform", "translate(235 ,443)")           //positioning the group that will contain the text - so as to form a label for the x axis.
+                .append("text")
+                .text("Payment Done In Past 6 Months / 10000")      // content of the text element 
+                .style("font-size","15px")                          //setting font size  
+                .style('fill', 'DimGray')                            //setting color of the text
+            
+            d3.select("#payScatter")                //adding another group element to the 'payScatter' group
+                .append("g")
+                .attr("transform", "translate(-50 ,355)rotate(-90)")    //positioning and rotating the group that will contain the text - so as to form a label for the y axis.
+                .append("text")
+                .text("Bill Amount In Past 6 Months  / 10000")      // content of the text element
+                .style("font-size","15px")                      //setting font size
+                .style('fill', 'DimGray')                        //setting color of the text
+            
+            // ############ month 1 ################
+
+            const xs1 = d3.scaleLinear()         //scalling the data values to plot on the x axis and specifying its domain and range
+                    .domain([0, 40 ])
+                    .range([10, width3]);
+            
+            const ys1 = d3.scaleLinear()         //scalling the data values to plot on the y axis and specifying its domain and range
+                    .domain([ -5, 65])
+                    .range([height3, 0]);
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the x axis to it
+                .attr("transform", `translate(0, ${height3+65})`)
+                .call(d3.axisBottom(xs1).ticks(7))                       //calling the x axis and specifying the number of ticks
+                .attr('color', 'DimGray')                               //setting the color of the text
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the y axis to it
+                .attr("transform", `translate(0, ${height3-85})`)
+                .call(d3.axisLeft(ys1).ticks(7))
+                .attr('color', 'DimGray')                               //setting the color of the text
+            
+            svg6.append('g')
+                .attr("transform", `translate(0, ${height3-85})`)       //adding and positioning a group element to add the scatter plot 
+                .selectAll("dot")
+                .data(main_data)            // assigning the data values
+                .join("circle")             //adding circles to the graph
+                .attr("cx", function (d) { return xs1(d.PAY_AMT1/10000); } )            //positioning the circle based on the data value
+                .attr("cy", function (d) { return ys1(d.BILL_AMT1/10000); } )
+                .attr("r", 1.5)                 //setting radius of the circle
+                .style("fill", "#aaf683")           //setting color of the circles
+
+            // ############ month 2 ################
+
+            const xs2 = d3.scaleLinear()         //scalling the data values to plot on the x axis and specifying its domain and range
+                    .domain([0, 40 ])
+                    .range([10, width3]);
+            
+            const ys2 = d3.scaleLinear()             //scalling the data values to plot on the y axis and specifying its domain and range
+                    .domain([ -5, 60])
+                    .range([height3, 0]);
+
+            svg6.append("g")                                           //adding and positioning a group element to the payScatter group - to add the x axis to it 
+                .attr("transform", `translate(250, ${height3+65})`)
+                .call(d3.axisBottom(xs2).ticks(7))                       //calling the x axis and specifying the number of ticks
+                .attr('color', 'DimGray')                               //setting the color of the text
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the y axis to it
+                .attr("transform", `translate(250, ${height3-85})`)
+                .call(d3.axisLeft(ys2).ticks(7))
+                .attr('color', 'DimGray')                               //setting the color of the text
+            
+            svg6.append('g')
+                .attr("transform", `translate(250, ${height3-85})`)     //adding and positioning a group element to add the scatter plot 
+                .selectAll("dot")
+                .data(main_data)            // assigning the data values
+                .join("circle")             //adding circles to the graph
+                .attr("cx", function (d) { return xs2(d.PAY_AMT2/10000); } )            //positioning the circle based on the data value
+                .attr("cy", function (d) { return ys2(d.BILL_AMT2/10000); } )
+                .attr("r", 1.5)                 //setting radius of the circle
+                .style("fill", "#9ed8db")           //setting color of the circles
+
+            // ############ month 3 ################ 
+            
+            const xs3 = d3.scaleLinear()         //scalling the data values to plot on the x axis and specifying its domain and range
+                    .domain([0, 55 ])
+                    .range([10, width3]);
+            
+            const ys3 = d3.scaleLinear()             //scalling the data values to plot on the y axis and specifying its domain and range
+                    .domain([ -10, 60])
+                    .range([height3, 0]);
+
+            svg6.append("g")                                        //adding and positioning a group element to the payScatter group - to add the x axis to it
+            .attr("transform", `translate(510, ${height3+65})`)
+                .call(d3.axisBottom(xs3).ticks(7))                   //calling the x axis and specifying the number of ticks
+                .attr('color', 'DimGray')                           //setting the color of the text
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the y axis to it
+                .attr("transform", `translate(510, ${height3-85})`)
+                .call(d3.axisLeft(ys3).ticks(7))
+                .attr('color', 'DimGray')                               //setting the color of the text
+            
+            svg6.append('g')
+                .attr("transform", `translate(510, ${height3-85})`)     //adding and positioning a group element to add the scatter plot 
+                .selectAll("dot")
+                .data(main_data)            // assigning the data values
+                .join("circle")             //adding circles to the graph
+                .attr("cx", function (d) { return xs3(d.PAY_AMT3/10000); } )            //positioning the circle based on the data value
+                .attr("cy", function (d) { return ys3(d.BILL_AMT3/10000); } )
+                .attr("r", 1.5)                 //setting radius of the circle
+                .style("fill", "#ff9b85")           //setting color of the circles
+
+            // ############ month 4 ################
+
+            const xs4 = d3.scaleLinear()         //scalling the data values to plot on the x axis and specifying its domain and range
+                    .domain([0, 45 ])
+                    .range([10, width3]);
+            
+            const ys4 = d3.scaleLinear()         //scalling the data values to plot on the y axis and specifying its domain and range
+                    .domain([ -10, 58])
+                    .range([height3, 0]);
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the x axis to it
+                .attr("transform", `translate(0, ${height3+250})`)
+                .call(d3.axisBottom(xs4).ticks(7))                       //calling the x axis and specifying the number of ticks
+                .attr('color', 'DimGray')                                   //setting the color of the text
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the y axis to it
+                .attr("transform", `translate(0, ${height3+100})`)
+                .call(d3.axisLeft(ys4).ticks(7))
+                .attr('color', 'DimGray')                               //setting the color of the text
+            
+            svg6.append('g')
+                .attr("transform", `translate(0, ${height3+100})`)  //adding and positioning a group element to add the scatter plot 
+                .selectAll("dot")
+                .data(main_data)            // assigning the data values
+                .join("circle")             //adding circles to the graph
+                .attr("cx", function (d) { return xs4(d.PAY_AMT4/10000); } )            //positioning the circle based on the data value
+                .attr("cy", function (d) { return ys4(d.BILL_AMT4/10000); } )
+                .attr("r", 1.5)                 //setting radius of the circle
+                .style("fill", "#F46A6A")           //setting color of the circles
+            
+            // ############ month 5 ################
+
+            const xs5 = d3.scaleLinear()         //scalling the data values to plot on the x axis and specifying its domain and range
+                    .domain([0, 35 ])
+                    .range([10, width3]);
+            
+            const ys5 = d3.scaleLinear()         //scalling the data values to plot on the y axis and specifying its domain and range
+                    .domain([ -10, 58])
+                    .range([height3, 0]);
+
+            svg6.append("g")                                                //adding and positioning a group element to the payScatter group - to add the x axis to it
+                .attr("transform", `translate(250, ${height3+250})`)
+                .call(d3.axisBottom(xs5).ticks(7))                       //calling the x axis and specifying the number of ticks
+                .attr('color', 'DimGray')                                   //setting the color of the text
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the y axis to it
+                .attr("transform", `translate(250, ${height3+100})`)
+                .call(d3.axisLeft(ys5).ticks(7))
+                .attr('color', 'DimGray')                                   //setting the color of the text
+            
+            svg6.append('g')
+                .attr("transform", `translate(250, ${height3+100})`)    //adding and positioning a group element to add the scatter plot 
+                .selectAll("dot")
+                .data(main_data)            // assigning the data values
+                .join("circle")             //adding circles to the graph
+                .attr("cx", function (d) { return xs5(d.PAY_AMT5/10000); } )            //positioning the circle based on the data value
+                .attr("cy", function (d) { return ys5(d.BILL_AMT5/10000); } )
+                .attr("r", 1.5)                 //setting radius of the circle
+                .style("fill", "#ffd97d")           //setting color of the circles
+
+            // ############ month 6 ################
+
+            const xs6 = d3.scaleLinear()             //scalling the data values to plot on the x axis and specifying its domain and range
+                    .domain([0, 40 ])
+                    .range([10, width3]);
+            
+            const ys6 = d3.scaleLinear()         //scalling the data values to plot on the y axis and specifying its domain and range
+                    .domain([ -10, 55])
+                    .range([height3, 0]);
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the x axis to it
+                .attr("transform", `translate(510, ${height3+250})`)
+                .call(d3.axisBottom(xs6).ticks(7))                      //calling the x axis and specifying the number of ticks
+                .attr('color', 'DimGray')                                   //setting the color of the text
+                .selectAll("text")
+                .attr("transform", "translate(-10,0)rotate(-45)")       // positioning and tilting the text values at ticks to fit them well
+                .style("text-anchor", "end");
+
+            svg6.append("g")                                            //adding and positioning a group element to the payScatter group - to add the y axis to it
+                .attr("transform", `translate(510, ${height3+100})`)
+                .call(d3.axisLeft(ys6).ticks(7))
+                .attr('color', 'DimGray')                                   //setting the color of the text
+            
+            svg6.append('g')
+                .attr("transform", `translate(510, ${height3+100})`)    //adding and positioning a group element to add the scatter plot 
+                .selectAll("dot")
+                .data(main_data)            // assigning the data values
+                .join("circle")             //adding circles to the graph
+                .attr("cx", function (d) { return xs6(d.PAY_AMT6/10000); } )            //positioning the circle based on the data value
+                .attr("cy", function (d) { return ys6(d.BILL_AMT6/10000); } )
+                .attr("r", 1.5)                 //setting radius of the circle
+                .style("fill", "#a69af0")           //setting color of the circles
+        }
+        paymentCharts(main_data)         // calling the function to render the scatter plots
+    })
+}
+updateDashboard()     // calling the main function to render the entire dashboard
+</script>
+</body>
+</html>
